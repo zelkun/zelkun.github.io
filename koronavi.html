@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+	<title>공적마스크 판매처 Map</title>
+	<meta charset="UTF-8">
+	<meta name="viewport"
+		content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width">
+	<meta name="referrer" content="always">
+	<link rel="canonical" href="https://zelkun.tistory.com">
+	<meta name="description" content="코로나19(COVID-19) 공적마스크 판매처 정보를 지도로 제공합니다, 위치기반으로 수량이 남은 판매처만 볼수 있습니다">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="공적마스크 판매처 Map">
+	<meta property="og:title" content="공적마스크 판매처 Map">
+	<meta property="og:description" content="코로나19(COVID-19) 공적마스크 판매처 정보를 지도로 제공합니다, 위치기반으로 수량이 남은 판매처만 볼수 있습니다">
+	<style>
+		#map {
+			height: 88%;
+		}
+
+		html,
+		body {
+			height: 100%;
+			width: 100%;
+			margin: 0;
+			padding: 0;
+		}
+
+		#content {
+			text-align: center;
+			padding-top: 10px;
+			padding-bottom: 10px;
+		}
+	</style>
+	<script src="https://code.jquery.com/jquery-latest.min.js" type="application/javascript"></script>
+	<script type="application/javascript">
+		var apiUrl = 'https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/storesByGeo/json'
+		var map, circle, infoWindow;
+		var geoPos = { lat: null, lng: null };
+		var ipPos = { lat: null, lng: null };
+		var distance = 500;
+		var markers = [];
+		var pre_window = null;
+		var myip = null;
+		var cnt = 0;
+
+		$(document).ready(function () {
+			var str = '본 사이트는 위치정보를 필요로하며\n공공데이터포털: 건강보험심사평가원 공적 마스크 판매 정보\n API를 사용하고 있습니다\n마스크 구매시 참고자료로만 활용해주시기 바랍니다';
+			alert(str);
+			$('#distance').change(function () {
+				fnCircle();
+				fnSetZoom();
+				$('#search').click();
+			});
+
+			$('#mylocation').click(function () {
+				getLocation();
+			});
+
+			$("#search").click(function () {
+				fn_markerRemoveAll();
+				fnSetParam();
+				var queryParams = '?' + encodeURIComponent('m') + '=' + distance;
+				queryParams += '&' + encodeURIComponent('lat') + '=' + geoPos.lat;
+				queryParams += '&' + encodeURIComponent('lng') + '=' + geoPos.lng;
+				//console.log(queryParams)
+				fnGetJson(apiUrl + queryParams, fnSetMaker);
+			});
+		});
+
+		function fnSetMaker(data) {
+			//console.log(data, data.count);
+			cnt = 0;
+			if (data.count > 0) {
+				for (var i = 0; i < data.stores.length; i++) {
+					row = data.stores[i];
+					//console.log(row.remain_stat)
+					if (row.remain_stat != "empty" && row.remain_stat != null) {
+						cnt++;
+
+						var state = '100개이상';
+						var iconUrl = 'http://maps.google.com/mapfiles/ms/icons/';
+						if (row.remain_stat == 'plenty') {
+							iconUrl += 'green-dot.png';
+							state = '100개 이상';
+						} else if (row.remain_stat == 'some') {
+							iconUrl += 'yellow-dot.png';
+							state = '30~100개 이하';
+						} else { //few
+							iconUrl += 'red-dot.png';
+							state = '2~30개 이하';
+						}
+
+						var marker = new google.maps.Marker({
+							position: new google.maps.LatLng(row.lat, row.lng),
+							map: map,
+							//icon: icon,
+							draggable: false,
+							data: row,
+							icon: { url: iconUrl }
+						});
+
+						var htmlStr = '<div>'
+						htmlStr += '<b>' + row.name + '</b>';
+						htmlStr += '<br/>주소: ' + row.addr;
+						htmlStr += '<br/>수량: ' + state;
+						htmlStr += '<br/>입고시간: ' + row.stock_at;
+						htmlStr += '</div>';
+
+						marker.infowindow = new google.maps.InfoWindow({
+							content: htmlStr
+						});
+
+						//map 마커 마우스 오버
+						marker.addListener('mouseover', function () {
+							this.infowindow.open(map, this);
+							this.infowindow.setZIndex(-1);
+						});
+						marker.addListener('mouseout', function () {
+							this.infowindow.close();
+						});
+						marker.addListener('click', function () {
+							if (pre_window != null) {
+								//console.log(pre_window)
+								pre_window.infowindow.close();
+							}
+							this.infowindow.open(map, this);
+							this.infowindow.setZIndex(-1);
+							map.setCenter({ lat: this.data.lat, lng: this.data.lng });
+							//map.setZoom(16);
+							fnCircle();
+							pre_window = this;
+						});
+
+						markers.push(marker);
+						//marker.infowindow.open(map, marker);
+					}
+				}
+
+				//fnSetZoom();
+				if (cnt == 0) {
+					alert($('#distance option:selected').text() + ' 이내에 재고가 없습니다');
+				} else if (cnt == 1) {
+					markers[0].infowindow.open(map, markers[0]);
+					pre_window = markers[0];
+				}
+
+			} else {
+				alert($('#distance option:selected').text() + ' 이내에 판매처가 없습니다');
+			}
+		}
+
+		function fn_markerRemoveAll() {
+			markers.map(function (r, i) {
+				r.setMap(null);
+			});
+			markers = [];
+		}
+
+		function fnSetParam() {
+			geoPos.lat = map.getCenter().lat();
+			geoPos.lng = map.getCenter().lng();
+			distance = $("#distance").val();
+		}
+
+		function fnCircle() {
+			fnSetParam();
+			drawCircleOnMap(geoPos.lat, geoPos.lng, distance);
+		}
+
+		function fnSetZoom() {
+			var pos = { lat: geoPos.lat, lng: geoPos.lng };
+			map.setCenter(pos);
+			if (distance > 1000) {
+				map.setZoom(13);
+			} else if (distance > 500) {
+				map.setZoom(15);
+			} else if (distance > 100) {
+				map.setZoom(16);
+			} else {
+				map.setZoom(17);
+			}
+		}
+
+		function getLocation() {
+			// Try HTML5 geolocation.
+			if (navigator.geolocation) {
+				navigator.geolocation.getCurrentPosition(function (position) {
+					geoPos.lat = position.coords.latitude;
+					geoPos.lng = position.coords.longitude;
+
+					var pos = { lat: geoPos.lat, lng: geoPos.lng };
+					infoWindow.setPosition(pos);
+					infoWindow.setContent('현재위치');
+					//infoWindow.open(map);
+					//map.setCenter(pos);
+					//map.setZoom(15);
+					fnSetZoom();
+					fnCircle();
+					$('#search').click();
+				}, function () {
+					handleLocationError(true, infoWindow, map.getCenter());
+				});
+			} else {
+				// Browser doesn't support Geolocation
+				handleLocationError(false, infoWindow, map.getCenter());
+			}
+		}
+
+		function initMap() {
+			var mapDiv = document.getElementById('map');
+			map = new google.maps.Map(mapDiv, {
+				center: { lat: 36.350459, lng: 127.384831 },
+				zoom: 14
+			});
+			infoWindow = new google.maps.InfoWindow;
+
+			google.maps.event.addDomListener(mapDiv, 'click', function () {
+				//window.alert('Map was clicked!');
+				fnCircle();
+			});
+
+			map.addListener('drag', function () {
+				fnCircle();
+			});
+
+			map.addListener('dragend', function () {
+				$('#search').click();
+			});
+
+			drawCircleOnMap = function (lat, lng, radius) {
+				if (circle) {
+					circle.setMap(null);
+				}
+				circle = new google.maps.Circle({
+					strokeColor: '#8181F7',
+					strokeOpacity: 0.3,
+					strokeWeight: 1,
+					fillColor: '#0101DF',
+					fillOpacity: 0.1,
+					center: {
+						lat: lat
+						, lng: lng
+					},
+					radius: Number(radius)
+				});
+				circle.setMap(map);
+			}
+			fnCircle();
+			getLocation();
+		}
+
+		function handleLocationError(browserHasGeolocation, infoWindow, pos) {
+			infoWindow.setPosition(pos);
+			infoWindow.setContent(browserHasGeolocation ?
+				'Error: 위치정보를 확인할 수 없습니다, IP 기반으로 조회합니다' :
+				'Error: 위치정보를 제공하지 않는 브라우저입니다, IP 기반으로 조회합니다');
+			infoWindow.open(map);
+
+			if (ipPos.lat != null && ipPos.lng != null) {
+				fnIpGeoSearch();
+			} else {
+				fnGetIpPos();
+			}
+		}
+
+		function fnGetJson(url, fnCallback) {
+			//console.log(url)
+			var xhr = new XMLHttpRequest();
+			xhr.open('GET', url);
+			xhr.onreadystatechange = function () {
+				if (this.readyState == 4) {
+					//alert('Status: '+this.status+' Headers: '+JSON.stringify(this.getAllResponseHeaders())+' Body: '+this.responseText);
+					//console.log(this.responseText);
+					fnCallback(JSON.parse(this.responseText));
+				}
+			};
+			xhr.send('');
+		}
+
+
+		function fnGetIpPos(ip) {
+			var url = 'https://jsonip.com';
+			fnGetJson(url, function (data) {
+				myip = data.ip;
+
+				var url = 'http://ip-api.com/json/' + myip;
+				fnGetJson(url, function (data) {
+					//console.log(data)
+					ipPos = { lat: Number(data.lat), lng: Number(data.lon) };
+					fnIpGeoSearch();
+				});
+			});
+		}
+
+		function fnIpGeoSearch() {
+			var pos = { lat: ipPos.lat, lng: ipPos.lng };
+			if (infoWindow != null) {
+				infoWindow.setPosition(pos);
+			}
+			map.setCenter(pos);
+			fnCircle();
+			fnSetZoom();
+
+			$('#search').click();
+		}
+	</script>
+	<!--script type="text/javascript" src="http://jsgetip.appspot.com"></script-->
+</head>
+
+<body oncontextmenu='return false' ondragstart='return false' onselectstart='return false'>
+	<!--onkeydown="return false">-->
+	<div id="test1"></div>
+	<div id="content">
+		<span>공적마스크 판매처 위치정보 조회</span><br />
+		<select id="distance">
+			<option value="100">100m</option>
+			<option value="500">500m</option>
+			<option value="1000" selected="selected">1km</option>
+			<option value="5000">5km</option>
+		</select>
+		<button id="search">조회</button>
+		<button id="mylocation">내위치</button>
+	</div>
+	<div id="map"></div>
+	<div style="text-align: right;"><span>Creator by. ZelKun (<a
+				href="https://zelkun.tistory.com">https://zelkun.tistory.com</a>)</span></div>
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCzVGb39X7UD19csEIlK_Cf2K8UxO9brYA&callback=initMap"
+		async defer></script>
+</body>
+
+</html>
