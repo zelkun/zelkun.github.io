@@ -79,7 +79,7 @@
 						cnt++;
 
 						var state = '100개이상';
-						var iconUrl = 'http://maps.google.com/mapfiles/ms/icons/';
+						var iconUrl = 'https://maps.google.com/mapfiles/ms/icons/';
 						if (row.remain_stat == 'plenty') {
 							iconUrl += 'green-dot.png';
 							state = '100개 이상';
@@ -284,7 +284,7 @@
 			fnGetJson(url, function (data) {
 				myip = data.ip;
 
-				var url = 'http://ip-api.com/json/' + myip;
+				var url = 'https://ip-api.com/json/' + myip;
 				fnGetJson(url, function (data) {
 					//console.log(data)
 					ipPos = { lat: Number(data.lat), lng: Number(data.lon) };
