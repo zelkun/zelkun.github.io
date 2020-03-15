@@ -2,17 +2,19 @@
 <html lang="ko">
 
 <head>
-	<title>내주위 공적마스크 판매처 Map</title>
+	<title>내주위 공적마스크 판매처 위치정보 조회</title>
 	<meta charset="UTF-8">
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport"
-		content="user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, width=device-width">
+		content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no">
 	<meta name="referrer" content="always">
 	<link rel="canonical" href="https://zelkun.tistory.com">
 	<meta name="description" content="코로나19(COVID-19) 공적마스크 판매처 정보를 지도로 제공합니다, 위치기반으로 수량이 남은 판매처만 볼수 있습니다">
 	<meta property="og:type" content="website">
 	<meta property="og:site_name" content="공적마스크 판매처 Map">
 	<meta property="og:title" content="공적마스크 판매처 Map">
-	<meta property="og:description" content="코로나19(COVID-19) 공적마스크 판매처 정보를 지도로 제공합니다, 위치기반으로 수량이 남은 판매처만 볼수 있습니다">
+	<meta property="og:description" content="내주위 코로나19(COVID-19) 공적마스크 판매처 정보를 지도로 제공합니다, 위치기반으로 수량이 남은 판매처만 볼수 있습니다">
 	<style>
 		#map {
 			height: 88%;
@@ -32,6 +34,15 @@
 			padding-bottom: 10px;
 		}
 	</style>
+	<!-- Global site tag (gtag.js) - Google Analytics -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-71760888-9"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag() { dataLayer.push(arguments); }
+		gtag('js', new Date());
+
+		gtag('config', 'UA-71760888-9');
+	</script>
 	<script src="https://code.jquery.com/jquery-latest.min.js" type="application/javascript"></script>
 	<script type="application/javascript">
 		var apiUrl = 'https://8oi9s0nnth.apigw.ntruss.com/corona19-masks/v1/storesByGeo/json'
@@ -43,6 +54,7 @@
 		var pre_window = null;
 		var myip = null;
 		var cnt = 0;
+		var circlePoint = null;
 
 		$(document).ready(function () {
 			var str = '본 사이트는 위치정보를 필요로하며\n공공데이터포털: 건강보험심사평가원 공적 마스크 판매 정보\n API를 사용하고 있습니다\n마스크 구매시 참고자료로만 활용해주시기 바랍니다';
@@ -165,7 +177,7 @@
 
 		function fnCircle() {
 			fnSetParam();
-			drawCircleOnMap(geoPos.lat, geoPos.lng, distance);
+			drawCircleOnMap(geoPos, distance);
 		}
 
 		function fnSetZoom() {
@@ -189,8 +201,7 @@
 					geoPos.lat = position.coords.latitude;
 					geoPos.lng = position.coords.longitude;
 
-					var pos = { lat: geoPos.lat, lng: geoPos.lng };
-					infoWindow.setPosition(pos);
+					infoWindow.setPosition(geoPos);
 					infoWindow.setContent('현재위치');
 					//infoWindow.open(map);
 					//map.setCenter(pos);
@@ -228,20 +239,27 @@
 				$('#search').click();
 			});
 
-			drawCircleOnMap = function (lat, lng, radius) {
+			drawCircleOnMap = function (pos, radius) {
+				if (circlePoint) {
+					circlePoint.setMap(null);
+				}
 				if (circle) {
 					circle.setMap(null);
 				}
+
+				circlePoint = new google.maps.Marker({
+					position: new google.maps.LatLng(pos),
+					map: map,
+					icon: { url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' },
+				});
+
 				circle = new google.maps.Circle({
 					strokeColor: '#8181F7',
 					strokeOpacity: 0.3,
 					strokeWeight: 1,
 					fillColor: '#0101DF',
 					fillOpacity: 0.1,
-					center: {
-						lat: lat
-						, lng: lng
-					},
+					center: pos,
 					radius: Number(radius)
 				});
 				circle.setMap(map);
@@ -305,14 +323,14 @@
 			$('#search').click();
 		}
 	</script>
-	<!--script type="text/javascript" src="http://jsgetip.appspot.com"></script-->
+	<!--script type="text/javascript" src="https://jsgetip.appspot.com"></script-->
 </head>
 
 <body oncontextmenu='return false' ondragstart='return false' onselectstart='return false'>
 	<!--onkeydown="return false">-->
 	<div id="test1"></div>
 	<div id="content">
-		<span>공적마스크 판매처 위치정보 조회</span><br />
+		<span>내주위 공적마스크 판매처 위치정보 조회</span><br />
 		<select id="distance">
 			<option value="100">100m</option>
 			<option value="500">500m</option>
