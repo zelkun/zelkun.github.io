@@ -1,0 +1,28 @@
+@CHARSET "UTF-8";
+#map {
+	height: 87%;
+}
+
+html,body {
+	height: 100%;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+#content {
+	text-align: center;
+	padding-top: 10px;
+	padding-bottom: 10px;
+}
+
+div#info {
+	width: 95%;
+}
+
+div.infowindow {
+	font: 400 11px Roboto, Arial, sans-serif;
+	font-size: 13px;
+	font-weight: 300;
+	padding: 12px;
+}

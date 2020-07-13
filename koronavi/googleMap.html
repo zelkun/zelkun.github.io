@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+	<title>내주위 공적마스크 판매처 위치정보 조회</title>
+	<meta charset="UTF-8">
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<meta name="viewport"
+		content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+	<meta name="referrer" content="always">
+	<link rel="canonical" href="http://koronavi.kro.kr/index.html">
+	<meta name="description" content="내주위 코로나19(COVID-19) 공적마스크 판매처 정보를 지도로 제공합니다, 위치기반으로 수량이 남은 판매처만 볼수 있습니다">
+	<meta property="og:type" content="website">
+	<meta property="og:site_name" content="내주위 공적마스크 판매처 위치정보 조회">
+	<meta property="og:title" content="내주위 공적마스크 판매처 위치정보 조회">
+	<meta property="og:description" content="내주위 코로나19(COVID-19) 공적마스크 판매처 정보를 지도로 제공합니다, 위치기반으로 수량이 남은 판매처만 볼수 있습니다">
+	<link rel="stylesheet" type="text/css" href="./common.css">
+	</link>
+
+	<script src="https://code.jquery.com/jquery-latest.min.js" type="application/javascript"></script>
+	<script src="./common.js" type="application/javascript"></script>
+
+	<!-- //Global site tag (gtag.js) - Google Analytics -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-71760888-9"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag() {
+			dataLayer.push(arguments);
+		}
+		gtag('js', new Date());
+
+		gtag('config', 'UA-71760888-9');
+	</script>
+	<!-- //Global site tag (gtag.js) - Google Analytics -->
+
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAXqqn1bfAWFzFGENvOhBC_R7B701MV3-s&callback=initMap" async defer></script>
+
+	<script type="application/javascript">
+		function fnGetMarker(row, state) {
+			var marker = new google.maps.Marker({
+				position: new google.maps.LatLng(row.lat, row.lng),
+				map: map,
+				draggable: false,
+				data: row,
+				icon: { url: state.iconUrl }
+			});
+
+			marker.infoWindow = new google.maps.InfoWindow({
+				content: fnMarkerInfoWindowHtml(row, state)
+			});
+			return marker;
+		}
+		function initMap() {
+			var mapDiv = document.getElementById('map');
+			map = new google.maps.Map(mapDiv, {
+				center: { lat: 36.350459, lng: 127.384831 },
+				zoom: 14
+			});
+			infoWindow = new google.maps.InfoWindow;
+
+			drawCircleOnMap = function (pos, radius) {
+				var position = new google.maps.LatLng(pos);
+				if(!circlePoint){
+					// circlePoint.setMap(null);
+					circlePoint = new google.maps.Marker({
+						position: position,
+						map: map,
+						icon: { url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png' },
+					});
+				}
+
+				if(!circle){
+					// circle.setMap(null);
+					circle = new google.maps.Circle({
+						strokeColor: '#8181F7',
+						strokeOpacity: 0.3,
+						strokeWeight: 1,
+						fillColor: '#0101DF',
+						fillOpacity: 0.1,
+						center: position,
+						radius: Number(radius)
+					});
+					circle.setMap(map);
+				}
+
+				circlePoint.setPosition(position);
+				circle.setCenter(position);
+				circle.setRadius(Number(radius));
+			}
+
+			google.maps.event.addDomListener(mapDiv, 'click', function () {
+				// window.alert('Map was clicked!');
+				fnCircle();
+			});
+
+			map.addListener('drag', function () {
+				fnCircle();
+			});
+
+			map.addListener('dragend', function () {
+				$('#search').click();
+			});
+
+			fnCircle();
+			fnGetLocation();
+		}
+
+		function onSuccessGeolocation(position) {
+			geoPos.lat = position.coords.latitude;
+			geoPos.lng = position.coords.longitude;
+
+			infoWindow.setPosition(geoPos);
+			infoWindow.setContent('현재위치');
+
+			fnSetZoom();
+			fnCircle();
+			$('#search').click();
+		}
+
+		function onErrorGeolocation() {
+			handleLocationError(true, infoWindow, map.getCenter());
+		}
+
+		function handleLocationError(browserHasGeolocation, infoWindow, pos) {
+			infoWindow.setPosition(pos);
+			infoWindow.setContent(browserHasGeolocation ?
+				//'Error: 위치정보를 확인할 수 없습니다, IP 기반으로 조회합니다' :
+				//'Error: 위치정보를 제공하지 않는 브라우저입니다, IP 기반으로 조회합니다');
+				'Error: 위치정보를 확인할 수 없습니다, 위치정보를 허용해주세요' :
+				'Error: 위치정보를 제공하지 않는 브라우저입니다');
+			infoWindow.open(map);
+
+			if (ipPos.lat != null && ipPos.lng != null) {
+				// fnIpGeoSearch();
+			} else {
+				// fnGetIpPos();
+			}
+		}
+	</script>
+	<!--script type="text/javascript" src="https://jsgetip.appspot.com"></script-->
+</head>
+
+<body oncontextmenu='return false' ondragstart='return false' onselectstart='return false'>
+	<!--onkeydown="return false">-->
+	<div id="content">
+		<span>내주위 공적마스크 판매처 위치정보 조회</span><br /> <select id="distance">
+			<option value="100">100m</option>
+			<option value="500">500m</option>
+			<option value="1000" selected="selected">1km</option>
+			<option value="5000">5km</option>
+		</select>
+		<button id="search">조회</button>
+		<button id="mylocation">내위치</button>
+		<input type="checkbox" id="closed">영업종료 제외
+		<br/><font size="2">* 영업시간이 확인된 판매처만 제외됩니다</font>
+	</div>
+	<div id="map"></div>
+	<div style="text-align: right;">
+		<span>Created by. ZelKun (<a href="https://zelkun.tistory.com">https://zelkun.tistory.com</a>)
+		</span>
+	</div>
+</body>
+
+</html>
