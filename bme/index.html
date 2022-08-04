@@ -1,11 +1,86 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-    <meta charset="UTF-8"/>
-    <title>bme oneday chart</title>
-</head>
-<body>
-    <h1>bme oneday chart</h1>
-    <div>test</div>
-</body>
-<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Test</title>
+		<script src="https://code.jquery.com/jquery-latest.min.js"></script>
+		<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+		<script src="https://www.google.com/jsapi"></script>
+		<script type="text/javascript">
+			google.charts.load("current", {packages:['corechart']});
+			google.charts.setOnLoadCallback(fnInit);
+
+			var today;
+			function fnInit(){
+				var now = new Date();
+				today = now.getFullYear() + '-' + fnNumFormat(now.getMonth() + 1) + '-' + fnNumFormat(now.getDate());
+
+				var data_url = '/bme/asset/js/bme_' + today +'.js';
+				fnGetContent(data_url, null, fnConvert, 'get');
+				//drawChart(data);
+			}
+			function fnConvert(object){
+				eval(object);
+				drawChart();
+			}
+			function fnGetContent(url, postData, callback, method="POST"){
+				$.ajax({
+					url: url
+					, type: method
+					, contentType: 'application/x-www-form-urlencoded'
+					, data: postData
+					, error: function(e){
+						console.log('error', url, e)
+					}
+					, success: function(d) {
+						//console.log('success', url)
+						callback(d);
+					}
+					, complete: function(d) {
+						console.log('complete', url)
+					}
+				});
+			}
+
+			function fnNumFormat(num, digt = 2) {
+				let rst = null;
+				if (num < 10) rst = '0' + num;
+				else rst = num + '';
+				if (rst.length < digt)
+					while (rst.length != digt) {
+						rst = fnConcatStr('0', rst);
+					}
+				return rst;
+			}
+
+			function drawChart(bme) {
+				if(!bme)
+					bme = data;
+				console.log(bme.cols)
+				console.log(bme.rows)
+				var chart_data = new google.visualization.DataTable(bme);
+				//console.log(chart_data)
+				//var csv = google.visualization.dataTableToCsv(chart_data);
+				//console.log(csv);
+
+				var options = {
+					title : today + ', 온도, 습도, 압쳑, 고도',
+					vAxis: {title: 'tmp'},
+					hAxis: {title: 'min'},
+					seriesType: 'bars',
+					series: {
+						0: {type: 'line'}
+						, 1: {type: 'line'}
+						, 2: {type: 'line'}
+						, 3: {type: 'line'}
+					}
+				};
+				var chart = new google.visualization.ComboChart(document.getElementById('chart_div'));
+				chart.draw(chart_data, options);
+			}
+		</script>
+	</head>
+	<body>
+		<div id="chart_div" style="width: 100%; height: 600px"></div>
+	</body>
+</html>
