@@ -52,10 +52,38 @@
 					}
 				return rst;
 			}
+            function dataConvertChart(data){
+				var table = {
+					cols: data.cols
+					, rows: []
+				};
+				var r = data.rows;
+				var date = '';
+				for (var i = 0; i < r.length; i++) {
+					//console.log('r', r[i])
+					var tmp = {
+						"c": [
+							{"v": (date != r[i].date) ? r[i].cdate : r[i].time}
+							, {"v": r[i].temperature}
+							, {"v": r[i].humidity}
+							, {"v": r[i].pressure}
+							, {"v": r[i].altitude}
+						]
+					};
+					// 일자변경시 표시
+					if(date == '' || date != r[i].date) {
+						//console.log('date:\t', date, (date != r[i].date) ? r[i].cdate : r[i].time)
+						//console.log(tmp)
+						date = r[i].date;
+					}
+					table.rows.push(tmp);
+				}
+				return table;
+			}
 
 			function drawChart(bme) {
 				if(!bme)
-					bme = data;
+					bme = dataConvertChart(data)
 				console.log(bme.cols)
 				console.log(bme.rows)
 				var chart_data = new google.visualization.DataTable(bme);
